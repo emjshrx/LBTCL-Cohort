@@ -1,5 +1,5 @@
 
-A self-study cohort program organized on Learning Bitcoin from the Command Line tutorials. Its an indepth tutorial series
+A self-study cohort program organized on [Learning Bitcoin from the Command Line](https://github.com/BlockchainCommons/Learning-Bitcoin-from-the-Command-Line) tutorials. It's an in-depth tutorial series
 on using `bitcoin-cli` and `bitcoind` in `regtest` via the command-line. Covering from very basic to advanced `bitcoin-cli` operations.
 
 Apply here: https://www.bitshala.org/apply
