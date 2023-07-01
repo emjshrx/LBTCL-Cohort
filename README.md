@@ -11,7 +11,7 @@ Upon successful completion of the cohort program, participants will receive a ce
 
 
 # Prerequisite
-Participants are expected to have a basic knowledge of Bitcoin and familiarity with terminal operations. Prior to joining the cohort, it is recommended to cover the material in the book Mastering Bitcoin and become comfortable with Unix/Linux command-line terminals.
+Participants are expected to have a basic knowledge of Bitcoin and familiarity with terminal operations. Prior to joining the cohort, it is recommended to cover the material in the book [Mastering Bitcoin](https://github.com/bitcoinbook/bitcoinbook) and become comfortable with [Unix/Linux command-line terminals](https://www.youtube.com/watch?v=s3ii48qYBxA).
 
 # Cohort Overview
 
