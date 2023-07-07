@@ -83,3 +83,80 @@ Following are some questions to be discussed.
  - What is BIP67 lexicographical ordering?
  - Does the order of signature matter for signing multisig?
  - Explain the use of `addmultisigaddress` command. When is it useful over vanilla multisig generation?
+
+
+# 07_0_Expanding_Bitcoin_Transactions_PSBTs
+
+ - What is a PSBT and why is it useful?
+ - What are the different components of PSBT? Can you explain each part and it's use in brief?
+ - What is HWI? What it is useful for?
+
+
+# 08_0_Expanding_Bitcoin_Transactions_Other
+ - How locktime via unix time and via blockheight are differentiated from the transaction data? [extra resources]
+ - What is a LockTime? Why locktimes are useful?
+ - What is OP_RETURN? How are the useful? What happens in script verification when when it encounters an OP_RETURN?
+
+# 09_0_Introducing_Bitcoin_Scripts
+
+ - What is ScriptPubkey and ScriptSigs? How they are used in the script verification?
+ - Why P2PKH is needed when we already had P2PK. [Extra reading resources]
+ - Describe the difference between Segwit and NonSegwit Script verification.
+ - How is a ScriptPubkey reduced into an Address? Can you recover a ScriptPubkey from an Address?
+ - What are standard and nonstandard script_pubkeys? Can you create an submit a transaction with nonstandrd pubkey to you mempool? [Hint: Create a transaction with addition script, call testmempoolaccept].
+ - How can you broadcast a non-standard reedemscript?
+
+# 10_0_Embedding_Bitcoin_Scripts_in_P2SH_Transactions
+
+ - Describe the script verification mechanism of P2SH.
+ - Why P2SH is useful when we can have the raw locking script inside the script_pubkey?
+ - Why P2SH hash length is 20 bytes, where as P2WSH script hash is 32 bytes? [extra resource]
+ - Why does multisig reedemscript start with a `0`?  Is this a bug? Is there a to fix it?
+ - What is the reason for wrapping P2WSH inside a P2SH?
+
+
+# 11_0_Empowering_Timelock_with_Bitcoin_Scripts
+
+ - What are the limitations of nLockTime?
+ - What is the difference between relative and absolute locktime?
+ - How are sequqence locks are set in a transaction? What was the previous (intended) use case of this data in the transaction?
+ - Describe in brief how CLTV verification works.
+ - Describe in brief how CSV verification works.
+ - What happens when a transaction includes both nlocktime and nsequqnce values? What is the error in testmempool accept when using a transaction like that.
+
+# 12_0_Expanding_Bitcoin_Scripts
+ - How can script conditionals cause transaction malleability? [wizard]
+ - What are some real world conditional script examples?
+ - What are some practical examples of OP_SWAP?
+
+# 13_0_Designing_Real_Bitcoin_Scripts
+ - What can multisig escrows be useful for?
+ - What are some real world exmaple of Multisig escrows?
+ - Is there any real world examples of complex bare scripts?
+ - What is the size constraints of Bitcoin reedemscripts?
+
+
+# General Extra Resource Questions:
+ - Standardness Rules.
+   - Why having bigger mempool is actually a bad idea?
+   -
+ - Coinselection.
+ - Descriptors.
+ - Taproot.
+ - RBF/CPFP.
+ - Relay Policies.
+ - Blockchain, blockheaders, related RPCs.
+ - P2P and related RPCs.
+
+# Wizard Questions
+ -
+
+# Exercises
+
+ - Week 2: Installation, Setting up, Running the wallet.
+ - Week 3: Transaction creation + RBF/CPFP.
+ - Week 4: Multisig + PSBT.
+ - Week 5: Locktime, OP_RETURN, P2PKH/P2WPKH Scripts.
+ - Week 6: Locktime + P2SH/P2WSH(nested).
+ - Week 7: Conditionals and puzzle scripts.
+
