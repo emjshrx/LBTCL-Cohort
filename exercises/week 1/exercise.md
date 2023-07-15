@@ -34,5 +34,6 @@ Write a shell script to:
 
 - To download the latest binaries for linux x86-64, via command line: `wget https://bitcoincore.org/bin/bitcoin-core-25.0/bitcoin-25.0-x86_64-linux-gnu.tar.gz`
 - Search up in google for command line instructions on tasks you don't know yet. Ex: "how to extract a zip folder via command line", "how to copy files into another directory via command line", etc.
+- Use `jq` tool to fetch specific data from `json` objects returned by `bitcoin-cli`. https://tecadmin.net/linux-jq-command/
 
 # Reading Materials
