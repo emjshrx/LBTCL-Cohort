@@ -22,12 +22,12 @@ Write a shell script to:
   - Fetch the unconfirmed transaction from the node's mempool and print the result. (hint: `bitcoin-cli help` to find list of all commands, look for `getmempoolentry`).
   - Confirm the transaction by creating 1 more block.
   - Fetch the following details of the transaction and print them into terminal.
-    - txid: <transaction id>
-    - <From, Amount>: <Miner's address>, Input Amount.
-    - <Send, Amount>: <Trader's address>, Sent Amount,
-    - <Change, Amount>: <Miner's address>, Change Back amount.
-    - Fees: Amount paid in fees.
-    - Block: Block height at which the transaction is confirmed.
+    - `txid`: `<transaction id>`
+    - `<From, Amount>`: `<Miner's address>, Input Amount`.
+    - `<Send, Amount>`: `<Trader's address>, Sent Amount`,
+    - `<Change, Amount>`: `<Miner's address>, Change Back amount`.
+    - `Fees`: `Amount paid in fees`.
+    - `Block: Block height at which the transaction is confirmed`.
 
 
 # Hints
