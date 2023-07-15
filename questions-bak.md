@@ -14,7 +14,7 @@ Following are some questions to be discussed.
 
  - What is the use of the Elliptic Curve in Bitcoin? What's the name of the elliptic curve used in Bitcoin? Are there other elliptic curves? Bonus: Why was this particular curve selected for Bitcoin?
 
- - What is a Blockchain? What makes it different from an Array or other common data types in programming? When is Blockchain data structure useful?
+*  - What is a Blockchain? What makes it different from an Array or other common data types in programming? When is Blockchain data structure useful?
 
  - Describe in Brief what Lightning Network is. What is the main benefit of using the Lightning network?
 
@@ -35,7 +35,7 @@ Following are some questions to be discussed.
  - Why is it required to install an old version of BDB to run Bitcoin? What happens when you don't install BDB and try to run the software?
  - Whats the difference between bitcoind and bitcoin-qt? When to use one over the other?
  - What are the different self-hosted node setup? Have you used any of them? Which one have you found most user-friendly?
- - Why is it important to run your own Bitcoin node?
+* - Why is it important to run your own Bitcoin node?
  - What does `autogen`.sh` and `configure` does while building bitcoin core from source?
 
 
