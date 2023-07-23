@@ -37,20 +37,35 @@ else
     echo "Signature verification failed"
 fi
 
-# install the above binary and move the binaries to /usr/local/bin/ for folder.
+# check if bitcoin core is installed via homebrew casks,if not install it
 
-sudo hdiutil attach bitcoin-25.0-arm64-apple-darwin.dmg
-sudo cp -r /Volumes/Bitcoin-Core/bitcoin-25.0/* /usr/local/bin/
-sudo chown -R $USER /usr/local/bin/bitcoin*
-sudo chmod 755 /usr/local/bin/bitcoin*
+brew ls | grep "bitcoin-core"
 
-# Create a bitcoin.conf file in the /Users/$USER/Library/Application Support/Bitcoin and add "regtest=1" to it:
+if [ $? -eq 0 ]; then
+    echo "Bitcoin core is installed"
+else
+    echo "Bitcoin core is not installed"
+    brew install bitcoin-core
+fi
+
+
+
+# Create a bitcoin.conf file in the /Users/$USER/Library/Application Support/Bitcoin
 
 mkdir -p /Users/$USER/Library/Application\ Support/Bitcoin
 echo "regtest=1" >> /Users/$USER/Library/Application\ Support/Bitcoin/bitcoin.conf
 echo "fallbackfee=0.0001" >> /Users/$USER/Library/Application\ Support/Bitcoin/bitcoin.conf
 echo "server=1" >> /Users/$USER/Library/Application\ Support/Bitcoin/bitcoin.conf
-echo "txindex=1" >> /Users/$USER/Library/Application\ Support/Bitcoin/bitcoin.conf
+
+# Start bitcoind in the background
+bitcoind -daemon
+
+### wait for 10 seconds
+
+sleep 10
+
+# Now you can run bitcoin-cli getinfo
+bitcoin-cli -getinfo
 
 
 
