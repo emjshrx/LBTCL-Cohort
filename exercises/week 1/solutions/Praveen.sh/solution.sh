@@ -88,12 +88,50 @@ generate_address_and_mine_blocks() {
     #  In regtest mode, the block generation time is significantly reduced to allow for faster testing
     #  and development. By generating 101 blocks, a sufficient number of confirmations is achieved, and
     #  the network considers the transactions confirmed and reflects the updated wallet balance.
-    address=$(bitcoin-cli -rpcwallet="Miner" getnewaddress "Mining Reward")
-    bitcoin-cli -rpcwallet="Miner" generatetoaddress 101 $address
+    miner_address=$(bitcoin-cli -rpcwallet="Miner" getnewaddress "Mining Reward")
+    bitcoin-cli -rpcwallet="Miner" generatetoaddress 101 $miner_address
     bitcoin-cli -rpcwallet="Miner" getbalance
 }
 
-# Function to Mine new blocks to this address until you get positive wallet balance. (use generatetoaddress) (how many blocks it took to get to positive balance)
+# Function to Create a receiving addressed labeled "Received" from Trader wallet.
+# Send a transaction paying 20 BTC from Miner wallet to Trader's wallet.
+# print the transaction id and check the mempool for the transaction
+
+generate_trader_address() {
+    amount=20
+    trader_address=$(bitcoin-cli -rpcwallet="Trader" getnewaddress "Received")
+    tx_id=bitcoin-cli -rpcwallet="Miner" sendtoaddress $trader_address $20
+    echo "Transaction ID: $tx_id"
+    bc getmempoolentry $tx_id
+}
+
+# Function to Confirm the transaction by creating 1 more block.
+
+confirm_block() {
+    bitcoin-cli -rpcwallet="Miner" generatetoaddress 1 $miner_address
+    bitcoin-cli -rpcwallet="Miner" getbalance
+}
+
+# Function to display transaction details
+
+display_transaction_details() {
+    # bitcoin-cli -rpcwallet="Trader" gettransaction $tx_id
+    bitcoin-cli getrawtransaction "${tx_id}" true
+    fee=$(bitcoin-cli -rpcwallet="first_wallet" gettransaction $tx_id | jq '.fee')
+    blockheight=blockheight=$(bitcoin-cli -rpcwallet="first_wallet" gettransaction $tx_id | jq '.blockheight')
+    echo "Transaction ID: $tx_id"
+    echo "<From, Amount>: ${miner_address}, ${amount}"
+	echo "<Send, Amount>: ${trader_address}, ${amount}"
+    echo "Fee: $fee"
+    echo "Block Height: $blockheight"
+    echo "Miner Balance: $( bitcoin-cli -rpcwallet="Miner" getbalance )"
+	echo "Trader Balance: $( bitcoin-cli -rpcwallet="Trader" getbalance )"
+
+}
+
+
+
+
 
 
 # Call the functions in the desired order
@@ -107,6 +145,7 @@ create_wallets
 generate_address
 mine_blocks
 generate_address_and_mine_blocks
+display_transaction_details()
 
 
 
