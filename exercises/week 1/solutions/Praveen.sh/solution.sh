@@ -145,7 +145,7 @@ create_wallets
 generate_address
 mine_blocks
 generate_address_and_mine_blocks
-display_transaction_details()
+display_transaction_details
 
 
 
