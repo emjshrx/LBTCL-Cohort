@@ -80,10 +80,8 @@ start_bitcoind() {
 	echo -e "${ORANGE}Starting bitcoind${NC}"
 	# Start bitcoind in the background
 	bitcoind -daemon
-
 	# Wait for 10 seconds
 	sleep 10
-
 	# Now you can run bitcoin-cli getinfo
 	bitcoin-cli -getinfo
 }
@@ -94,7 +92,6 @@ create_wallets() {
 	echo -e "${ORANGE}Creating two wallets${NC}"
 	# Create a wallet called Miner
 	bitcoin-cli createwallet "Miner"
-
 	# Create a wallet called Trader
 	bitcoin-cli createwallet "Trader"
 }
@@ -109,9 +106,8 @@ generate_address_and_mine_blocks() {
 	echo -e "${ORANGE}Generate an address for miner and mine blocks${NC}"
 	miner_address=$(bitcoin-cli -rpcwallet="Miner" getnewaddress "Mining Reward")
 	bitcoin-cli -rpcwallet="Miner" generatetoaddress 101 $miner_address
-	#bitcoin-cli -rpcwallet="Miner" getbalance
 	original_balance=$(bitcoin-cli -rpcwallet="Miner" getbalance)
-	echo "Original Balance: $original_balance"
+
 }
 
 # Function to Create a receiving addressed labeled "Received" from Trader wallet.
@@ -126,7 +122,6 @@ generate_trader_address() {
 	echo "Transaction ID: $tx_id"
 	bitcoin-cli getmempoolentry $tx_id
 	new_balance=$(bitcoin-cli -rpcwallet="Miner" getbalance)
-	echo "New Balance: $new_balance"
 }
 
 # Function to Confirm the transaction by creating 1 more block.
@@ -140,47 +135,38 @@ confirm_block() {
 
 display_transaction_details() {
 	echo -e "${ORANGE}Display transaction details${NC}"
+
 	bitcoin-cli -rpcwallet="Miner"  gettransaction "${tx_id}" true
-
 	blockheight=$(bitcoin-cli -rpcwallet="Miner" gettransaction $tx_id | jq '.blockheight')
-
-	echo $original_balance, $new_balance
-
 	fees_paid=$(echo "$original_balance - $new_balance - $amount" | bc)
 
+    echo "\n\n\n\n"
 	echo "Transaction ID: $tx_id"
-	echo "<From, Amount>: ${miner_address}, ${amount}"
-	echo "<Send, Amount>: ${trader_address}, ${amount}"
-	echo "Fee: $fees_paid"
+	echo "From Address: ${miner_address}"
+	echo "To Address: ${trader_address}"
+    echo "Amount: $amount"
+	echo "Fee": $(printf "%.8f" ${fees_paid#-})
 	echo "Block Height: $blockheight"
 	echo "Miner Balance: $( bitcoin-cli -rpcwallet="Miner" getbalance )"
 	echo "Trader Balance: $( bitcoin-cli -rpcwallet="Trader" getbalance )"
-	#calculate fees paid by subsctracting the miner balance before and after the transaction
 }
 
 clean_up() {
 	echo -e "${ORANGE}Cleaning up${NC}"
 	# Stop bitcoind
 	bitcoin-cli stop
-
 	# Delete the regtest directory
 	rm -rf /Users/$USER/Library/Application\ Support/Bitcoin/regtest
-
 	# Delete the bitcoin.conf file
 	rm /Users/$USER/Library/Application\ Support/Bitcoin/bitcoin.conf
-
 	# Delete the binary, hash and signature files
 	rm bitcoin-25.0-arm64-apple-darwin*
 	rm SHA256SUMS*
 
 }
 
-
-
-
-
-
 # Call the functions in the desired order
+
 download_binary
 verify_binary_hash
 verify_signature
