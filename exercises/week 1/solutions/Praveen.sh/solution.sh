@@ -181,9 +181,9 @@ display_transaction_details() {
 }
 
 clean_up() {
-    echo "***************************************"
+    echo "****************************************"
 	echo -e "${ORANGE}Cleaning up${NC}"
-    echo "***************************************"
+    echo "****************************************"
 	# Stop bitcoind
 	bitcoin-cli stop
 	# Delete the regtest directory
