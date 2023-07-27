@@ -53,7 +53,7 @@ create_trader_address(){
     $DIR/bitcoin-cli -rpcwallet=Trader getnewaddress $1
 }
 
-create_transaction(){
+create_parent_transaction(){
     MINERTXID=($($DIR/bitcoin-cli -rpcwallet=Miner listunspent | jq -r '.[] | .txid'))
     MINERVOUT=($($DIR/bitcoin-cli -rpcwallet=Miner listunspent | jq -r '.[] | .vout'))
     
@@ -66,16 +66,17 @@ create_transaction(){
 
     PARENT=$($DIR/bitcoin-cli -rpcwallet=Miner -named createrawtransaction inputs='''[{"txid": "'$UTXO1_TXID'", "vout": '$UTXO1_VOUT', "sequence": 1 }, {"txid": "'$UTXO2_TXID'", "vout": '$UTXO2_VOUT', "sequence": 1 }]''' outputs='''{"'$TRADER_ADDR'": 70.0, "'$CHANGE_ADDR'": 29.999 }''')   
 
-    PARENT_TXID=$($DIR/bitcoin-cli decoderawtransaction $PARENT | jq -r '.txid')
+#    PARENT_TXID=$($DIR/bitcoin-cli decoderawtransaction $PARENT | jq -r '.txid')
 }
 
 sign_transaction(){
-    signedtx=$($DIR/bitcoin-cli -rpcwallet=Miner -named signrawtransactionwithwallet hexstring=$PARENT | jq -r '.hex')
+    unset signedtx
+    signedtx=$($DIR/bitcoin-cli -rpcwallet=$1 -named signrawtransactionwithwallet hexstring=$2 | jq -r '.hex')
     echo "transaction signed"
 }
 
 send_transaction(){
-    $DIR/bitcoin-cli -rpcwallet=Miner -named sendrawtransaction hexstring=$signedtx
+    $DIR/bitcoin-cli -rpcwallet=$1 -named sendrawtransaction hexstring=$signedtx
     echo "transaction sent"
 }
 
@@ -83,13 +84,13 @@ get_mempool_entry(){
 
     PARENT_TXID=$($DIR/bitcoin-cli -rpcwallet=Trader listtransactions | jq -r '.[0] | .txid')
     FEES=$($DIR/bitcoin-cli -rpcwallet=Trader getmempoolentry $PARENT_TXID | jq -r '.fees.base')
-    WEIGHT=$($DIR/bitcoin-cli -rpcwallet=Trader getmempoolentry $PARENT_TXID | jq -r '.weight')  
+    WEIGHT=$($DIR/bitcoin-cli -rpcwallet=Trader getmempoolentry $PARENT_TXID | jq -r '.weight')
     HEX=$($DIR/bitcoin-cli -rpcwallet=Trader gettransaction $PARENT_TXID | jq -r '.hex')
     PARENT_INPUT_TXID=($($DIR/bitcoin-cli decoderawtransaction $HEX | jq -r '.vin | .[] | .txid'))
     PARENT_INPUT_VOUT=($($DIR/bitcoin-cli decoderawtransaction $HEX | jq -r '.vin | .[] | .vout'))
     PARENT_OUTPUT_AMOUNT=($($DIR/bitcoin-cli decoderawtransaction $HEX | jq -r '.vout | .[] | .value'))
     PARENT_OUTPUT_SPUBKEY=($($DIR/bitcoin-cli decoderawtransaction $HEX | jq -r '.vout | .[] | .scriptPubKey.hex'))
-        
+
     echo "Parent txid: $PARENT_TXID"
     echo "Parent input txid 1: ${PARENT_INPUT_TXID[0]}" 
     echo "Parent input txid 2: ${PARENT_INPUT_TXID[1]}"
@@ -100,12 +101,20 @@ get_mempool_entry(){
     echo "Trader scriptPubKey: ${PARENT_OUTPUT_SPUBKEY[0]}"
     echo "Miner change scriptPubKey: ${PARENT_OUTPUT_SPUBKEY[1]}"      
     echo "Parent transaction fees: $FEES BTC"
-#Still need to convert weight to vbytes
-    echo "Parent transaction weight: $WEIGHT vsize"
+    echo "Parent transaction weight: $((WEIGHT/4)) vbytes"
 }
 
 create_child_transaction(){
+    PARENT_OUTPUT_VOUT=($($DIR/bitcoin-cli decoderawtransaction $HEX | jq -r '.vout | .[] | .n'))
+    MINER_ADDR_2=`create_miner_address Miner3`
 
+#    echo "Parent txid: $PARENT_TXID"
+#    echo "Parent output vout: ${PARENT_OUTPUT_VOUT[1]}"
+#    echo "New miner address: $MINER_ADDR_2"
+
+    CHILD=$($DIR/bitcoin-cli -rpcwallet=Miner -named createrawtransaction inputs='''[{"txid": "'$PARENT_TXID'", "vout": '${PARENT_OUTPUT_VOUT[1]}', "sequence": 1 }]''' outputs='''{"'$MINER_ADDR_2'": 29.9 }''')   
+
+}
 
 stop_bitcoind(){
     $DIR/bitcoin-cli stop
@@ -114,29 +123,32 @@ stop_bitcoind(){
 
 
 #Setup
-#reset_regtest
-#sleep 1
-#start_bitcoind
-#install_jq
+reset_regtest
+sleep 1
+start_bitcoind
+install_jq
 
 #1. Create two wallets named Miner and Trader
-#create_miner_wallet
-#create_trader_wallet
-#create_miner_address Miner1
+create_miner_wallet
+create_trader_wallet
+create_miner_address Miner1
 
 #2. Fund the Miner wallet with at least 3 block rewards worth of sats
-#mine_new_blocks Miner1 103
+mine_new_blocks Miner1 103
 
 #3. Craft a transaction from Miner to Trader called Parent transaction
-#create_transaction
+create_parent_transaction
 
 #4. Sign and broadcast the transaction
-#sign_transaction
-#send_transaction
+sign_transaction Miner "$PARENT"
+send_transaction
 
 #5. Make queries to the node's mempool to get Parent transaction details
 get_mempool_entry
-
+#echo $HEX
+create_child_transaction
+sign_transaction Miner "$CHILD"
+send_transaction
 #Cleanup
 #stop_bitcoind
 
