@@ -55,7 +55,7 @@ Write a bash script to:
 - You might have to make multiple CLI calls to get all the details.
 
 6. Print the above JSON in the terminal.
-7. Create a new transaction that spends from the above transaction (the `Parent`). Let's call it the `Child` transaction.
+7. Create a broadcast new transaction that spends from the above transaction (the `Parent`). Let's call it the `Child` transaction.
    - Input[0]: `Miner`'s output of the `Parent` transaction.
    - Output[0]: `Miner`'s new address. 29.900 BTC.
 8. Make a `getmempoolentry` query for the `Child` transaction and print the output.
