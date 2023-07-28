@@ -55,7 +55,7 @@ create_parent_transaction(){
     UTXO2_TXID=${MINERTXID[1]}
     UTXO2_VOUT=${MINERVOUT[0]}
     TRADER_ADDR=`create_address Trader`
-    CHANGE_ADDR=`create_address Miner`
+    CHANGE_ADDR=`$DIR/bitcoin-cli -rpcwallet=Miner getrawchangeaddress`
 
     PARENT=$($DIR/bitcoin-cli -rpcwallet=Miner -named createrawtransaction inputs='''[{"txid": "'$UTXO1_TXID'", "vout": '$UTXO1_VOUT' }, {"txid": "'$UTXO2_TXID'", "vout": '$UTXO2_VOUT' }]''' outputs='''{"'$TRADER_ADDR'": 70.0, "'$CHANGE_ADDR'": 29.999 }''' replaceable=true)   
 }
@@ -82,17 +82,25 @@ get_mempool_info(){
     PARENT_OUTPUT_AMOUNT=($($DIR/bitcoin-cli decoderawtransaction $HEX | jq -r '.vout | .[] | .value'))
     PARENT_OUTPUT_SPUBKEY=($($DIR/bitcoin-cli decoderawtransaction $HEX | jq -r '.vout | .[] | .scriptPubKey.hex'))
 
-    echo "Parent txid: $PARENT_TXID"
-    echo "Parent input txid 1: ${PARENT_INPUT_TXID[0]}" 
-    echo "Parent input txid 2: ${PARENT_INPUT_TXID[1]}"
-    echo "Parent input vout 1: ${PARENT_INPUT_VOUT[0]}" 
-    echo "Parent input vout 2: ${PARENT_INPUT_VOUT[1]}"
-    echo "Parent output 1 amount: ${PARENT_OUTPUT_AMOUNT[0]} BTC"
-    echo "Parent output 2 amount: ${PARENT_OUTPUT_AMOUNT[1]} BTC"
-    echo "Trader scriptPubKey: ${PARENT_OUTPUT_SPUBKEY[0]}"
-    echo "Miner change scriptPubKey: ${PARENT_OUTPUT_SPUBKEY[1]}"      
-    echo "Parent transaction fees: $FEES BTC"
-    echo "Parent transaction weight: $((WEIGHT/4)) vbytes"
+#    echo "Parent txid: $PARENT_TXID"
+#    echo "Parent input txid 1: ${PARENT_INPUT_TXID[0]}" 
+#    echo "Parent input txid 2: ${PARENT_INPUT_TXID[1]}"
+#    echo "Parent input vout 1: ${PARENT_INPUT_VOUT[0]}" 
+#    echo "Parent input vout 2: ${PARENT_INPUT_VOUT[1]}"
+#    echo "Parent output 1 amount: ${PARENT_OUTPUT_AMOUNT[0]} BTC"
+#    echo "Parent output 2 amount: ${PARENT_OUTPUT_AMOUNT[1]} BTC"
+#    echo "Trader scriptPubKey: ${PARENT_OUTPUT_SPUBKEY[0]}"
+#    echo "Miner change scriptPubKey: ${PARENT_OUTPUT_SPUBKEY[1]}"      
+#    echo "Parent transaction fees: $FEES BTC"
+#    echo "Parent transaction weight: $((WEIGHT/4)) vbytes"
+
+}
+
+pretty_print(){
+    VBYTES=$((WEIGHT/4))
+    JSON=$(jq --null-input --arg fees "$FEES" --arg txid1 "${PARENT_INPUT_TXID[0]}" --arg txid2 "${PARENT_INPUT_TXID[1]}" --arg vout1 "${PARENT_INPUT_VOUT[0]}" --arg vout2 "${PARENT_INPUT_VOUT[1]}" --arg pubkey1 "${PARENT_OUTPUT_SPUBKEY[1]}" --arg pubkey2 "${PARENT_OUTPUT_SPUBKEY[0]}" --arg amount1 "${PARENT_OUTPUT_AMOUNT[1]}" --arg amount2 "${PARENT_OUTPUT_AMOUNT[0]}" --arg weight "$VBYTES" '{"input": [{"txid": $txid1, "vout": $vout1}, {"txid": $txid2, "vout": $vout2}], "outputs": [{"script_pubkey": $pubkey1, "amount": $amount1}, {"script_pubkey": $pubkey2, "amount": $amount2}], "Fees": $fees, "Weight": $weight }' )
+
+    echo "${JSON}"
 }
 
 create_child_transaction(){
@@ -112,6 +120,12 @@ get_mempool_entry(){
     unset TXID
     TXID=$($DIR/bitcoin-cli decoderawtransaction $1 | jq -r '.txid')
     $DIR/bitcoin-cli -rpcwallet=Miner getmempoolentry $TXID
+}
+
+
+bump_fee(){
+    PARENT_BUMP=$($DIR/bitcoin-cli -rpcwallet=$1 bumpfee $PARENT_TXID '{"fee_rate": 529}')
+    
 }
 
 stop_bitcoind(){
@@ -144,14 +158,29 @@ send_transaction
 get_mempool_info
 
 #6 Print them as JSON in the terminal
+pretty_print
 
 #7 Create new transaction spending Miner's output
 create_child_transaction
 sign_transaction Miner "$CHILD"
 send_transaction
 sleep 1
+
 #8 Make a new mempool query for the child transaction
 get_mempool_entry "$CHILD"
+
+#9 Fee bump Parent transaction by 10k sats
+#bump_fee Miner
+#sign_transaction Miner "$PARENT_BUMP"
+#send_transaction
+
+#10 Sign and broadcast RBF transaction
+
+#11 Make another getmempool entry query for child
+#get_mempool_entry "$CHILD"
+
+#12 explanation in the terminal of what changed and why
+
 
 #Cleanup
 #stop_bitcoind
