@@ -17,7 +17,7 @@ Write a bash script to:
    - Input[0]: 50 BTC block reward.
    - Input[1]: 50 BTC block reward.
    - Output[0]: 70 BTC to `Trader`.
-   - Output[1]: 29.999 BTC change-back to `Miner`.
+   - Output[1]: 29.99999 BTC change-back to `Miner`.
    - **Signal for RBF** (Enable RBF for the transaction).
 4. Sign and broadcast the `Parent` transaction but do not mine it yet.
 5. Make queries to the node's mempool to get the `Parent` transaction details. Use the details to craft a JSON variable with the following structure:
@@ -57,7 +57,7 @@ Write a bash script to:
 6. Print the above JSON in the terminal.
 7. Create a broadcast new transaction that spends from the above transaction (the `Parent`). Let's call it the `Child` transaction.
    - Input[0]: `Miner`'s output of the `Parent` transaction.
-   - Output[0]: `Miner`'s new address. 29.900 BTC.
+   - Output[0]: `Miner`'s new address. 29.99998 BTC.
 8. Make a `getmempoolentry` query for the `Child` transaction and print the output.
 
 9. Now, fee bump the `Parent` transaction using RBF. Bump the fee by 10,000 satoshis.
