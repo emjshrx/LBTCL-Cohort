@@ -60,8 +60,8 @@ Write a bash script to:
    - Output[0]: `Miner`'s new address. 29.99998 BTC.
 8. Make a `getmempoolentry` query for the `Child` transaction and print the output.
 
-9. Now, fee bump the `Parent` transaction using RBF. Bump the fee by 10,000 satoshis.
-10. Sign and broadcast the RBF transaction.
+9. Now, fee bump the `Parent` transaction using RBF. Do not use `bitcoin-cli bumpfee`, instead hand-craft a conflicting transaction, that has the same inputs as the `Parent` but different outputs, adjusting their values to bump the fee of `Parent` by 10,000 satoshis.
+10. Sign and broadcast the The new Parent transaction.
 11. Make another `getmempoolentry` query for the `Child` transaction and print the result.
 12. Print an explanation in the terminal of what changed in the two `getmempoolentry` results for the `Child` transactions, and why?
 
