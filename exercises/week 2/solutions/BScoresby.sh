@@ -32,26 +32,19 @@ reset_regtest(){
     fi
 }
 
-create_miner_wallet(){
-    $DIR/bitcoin-cli -named createwallet wallet_name="Miner"
+create_wallet(){
+    $DIR/bitcoin-cli -named createwallet wallet_name="$1"
 }
 
-create_miner_address(){
-    $DIR/bitcoin-cli -rpcwallet=Miner getnewaddress "$1"
+create_address(){
+    $DIR/bitcoin-cli -rpcwallet=$1 getnewaddress
 }
 
 mine_new_blocks(){
-    MINER1=`create_miner_address $1`
+    MINER1=`create_address $1`
     $DIR/bitcoin-cli generatetoaddress $2 "$MINER1" > /dev/null
 }
 
-create_trader_wallet(){
-    $DIR/bitcoin-cli -named createwallet wallet_name="Trader"
-}
-
-create_trader_address(){
-    $DIR/bitcoin-cli -rpcwallet=Trader getnewaddress $1
-}
 
 create_parent_transaction(){
     MINERTXID=($($DIR/bitcoin-cli -rpcwallet=Miner listunspent | jq -r '.[] | .txid'))
@@ -61,12 +54,10 @@ create_parent_transaction(){
     UTXO1_VOUT=${MINERVOUT[0]}
     UTXO2_TXID=${MINERTXID[1]}
     UTXO2_VOUT=${MINERVOUT[0]}
-    TRADER_ADDR=`create_trader_address Trader1`
-    CHANGE_ADDR=`create_miner_address Miner2`
+    TRADER_ADDR=`create_address Trader`
+    CHANGE_ADDR=`create_address Miner`
 
-    PARENT=$($DIR/bitcoin-cli -rpcwallet=Miner -named createrawtransaction inputs='''[{"txid": "'$UTXO1_TXID'", "vout": '$UTXO1_VOUT', "sequence": 1 }, {"txid": "'$UTXO2_TXID'", "vout": '$UTXO2_VOUT', "sequence": 1 }]''' outputs='''{"'$TRADER_ADDR'": 70.0, "'$CHANGE_ADDR'": 29.999 }''')   
-
-#    PARENT_TXID=$($DIR/bitcoin-cli decoderawtransaction $PARENT | jq -r '.txid')
+    PARENT=$($DIR/bitcoin-cli -rpcwallet=Miner -named createrawtransaction inputs='''[{"txid": "'$UTXO1_TXID'", "vout": '$UTXO1_VOUT' }, {"txid": "'$UTXO2_TXID'", "vout": '$UTXO2_VOUT' }]''' outputs='''{"'$TRADER_ADDR'": 70.0, "'$CHANGE_ADDR'": 29.999 }''' replaceable=true)   
 }
 
 sign_transaction(){
@@ -80,7 +71,7 @@ send_transaction(){
     echo "transaction sent"
 }
 
-get_mempool_entry(){
+get_mempool_info(){
 
     PARENT_TXID=$($DIR/bitcoin-cli -rpcwallet=Trader listtransactions | jq -r '.[0] | .txid')
     FEES=$($DIR/bitcoin-cli -rpcwallet=Trader getmempoolentry $PARENT_TXID | jq -r '.fees.base')
@@ -106,14 +97,21 @@ get_mempool_entry(){
 
 create_child_transaction(){
     PARENT_OUTPUT_VOUT=($($DIR/bitcoin-cli decoderawtransaction $HEX | jq -r '.vout | .[] | .n'))
-    MINER_ADDR_2=`create_miner_address Miner3`
+    MINER_ADDR_2=`create_address Miner`
 
 #    echo "Parent txid: $PARENT_TXID"
 #    echo "Parent output vout: ${PARENT_OUTPUT_VOUT[1]}"
 #    echo "New miner address: $MINER_ADDR_2"
 
-    CHILD=$($DIR/bitcoin-cli -rpcwallet=Miner -named createrawtransaction inputs='''[{"txid": "'$PARENT_TXID'", "vout": '${PARENT_OUTPUT_VOUT[1]}', "sequence": 1 }]''' outputs='''{"'$MINER_ADDR_2'": 29.9 }''')   
+    CHILD=$($DIR/bitcoin-cli -rpcwallet=Miner -named createrawtransaction inputs='''[{"txid": "'$PARENT_TXID'", "vout": '${PARENT_OUTPUT_VOUT[1]}'}]''' outputs='''{"'$MINER_ADDR_2'": 29.99898 }''' replaceable=true)   
 
+    echo "Child Hex: $CHILD"
+}
+
+get_mempool_entry(){
+    unset TXID
+    TXID=$($DIR/bitcoin-cli decoderawtransaction $1 | jq -r '.txid')
+    $DIR/bitcoin-cli -rpcwallet=Miner getmempoolentry $TXID
 }
 
 stop_bitcoind(){
@@ -129,12 +127,11 @@ start_bitcoind
 install_jq
 
 #1. Create two wallets named Miner and Trader
-create_miner_wallet
-create_trader_wallet
-create_miner_address Miner1
+create_wallet Miner
+create_wallet Trader
 
 #2. Fund the Miner wallet with at least 3 block rewards worth of sats
-mine_new_blocks Miner1 103
+mine_new_blocks Miner 103
 
 #3. Craft a transaction from Miner to Trader called Parent transaction
 create_parent_transaction
@@ -144,11 +141,18 @@ sign_transaction Miner "$PARENT"
 send_transaction
 
 #5. Make queries to the node's mempool to get Parent transaction details
-get_mempool_entry
-#echo $HEX
+get_mempool_info
+
+#6 Print them as JSON in the terminal
+
+#7 Create new transaction spending Miner's output
 create_child_transaction
 sign_transaction Miner "$CHILD"
 send_transaction
+sleep 1
+#8 Make a new mempool query for the child transaction
+get_mempool_entry "$CHILD"
+
 #Cleanup
 #stop_bitcoind
 
@@ -157,4 +161,10 @@ send_transaction
 
 # CODE FOR GRABBING ADDRESS BY LABEL
 #    MINER1=`$DIR/bitcoin-cli -rpcwallet=Miner getaddressesbylabel "$1" | jq -r 'keys[0]'`
+
+
+#get_txid(){
+#    TXID=$(DIR/bitcoin-cli decoderawtransaction $1 | jq -r '.txid')
+#    PARENT_TXID=$($DIR/bitcoin-cli decoderawtransaction $PARENT | jq -r '.txid')
+#}
 
