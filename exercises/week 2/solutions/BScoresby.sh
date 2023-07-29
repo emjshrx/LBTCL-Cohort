@@ -1,8 +1,5 @@
 #!/bin/bash
 
-#Global variables
-#DIR=/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp
-
 setup(){
     mkdir -p /home/$USER/.bitcoin/tmp;
     touch /home/$USER/.bitcoin/tmp/bitcoin.conf
@@ -11,7 +8,6 @@ setup(){
         server=1
         txindex=1
         daemon=1" >> /home/$USER/.bitcoin/tmp/bitcoin.conf
-#    DIR=/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp
 }
 
 install_jq(){
@@ -24,23 +20,6 @@ install_jq(){
 start_bitcoind(){
     /usr/local/bin/bitcoin/bin/bitcoind -datadir=/home/$USER/.bitcoin/tmp -daemon
     sleep 5
-}
-
-reset_regtest(){
-    if [ -d /home/$USER/.bitcoin/regtest ];
-    then
-        while true; do
-            read -p "Program needs to reset Regtest. All Regtest data will be erased. Proceed? (Y/N) " eraseregtest
-            case $eraseregtest in
-                [yY]*) echo "Deleting regtest folder...";
-                    rm -r /home/$USER/.bitcoin/regtest;
-                    break;;
-                [nN]*) echo "Exiting...";
-                    exit 1;;
-                *) echo "Invalid reponse, please use Y or N" >&2
-            esac
-        done
-    fi
 }
 
 create_wallet(){
@@ -92,19 +71,6 @@ get_mempool_info(){
     PARENT_INPUT_VOUT=($(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp decoderawtransaction $HEX | jq -r '.vin | .[] | .vout'))
     PARENT_OUTPUT_AMOUNT=($(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp decoderawtransaction $HEX | jq -r '.vout | .[] | .value'))
     PARENT_OUTPUT_SPUBKEY=($(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp decoderawtransaction $HEX | jq -r '.vout | .[] | .scriptPubKey.hex'))
-
-#    echo "Parent txid: $PARENT_TXID"
-#    echo "Parent input txid 1: ${PARENT_INPUT_TXID[0]}" 
-#    echo "Parent input txid 2: ${PARENT_INPUT_TXID[1]}"
-#    echo "Parent input vout 1: ${PARENT_INPUT_VOUT[0]}" 
-#    echo "Parent input vout 2: ${PARENT_INPUT_VOUT[1]}"
-#    echo "Parent output 1 amount: ${PARENT_OUTPUT_AMOUNT[0]} BTC"
-#    echo "Parent output 2 amount: ${PARENT_OUTPUT_AMOUNT[1]} BTC"
-#    echo "Trader scriptPubKey: ${PARENT_OUTPUT_SPUBKEY[0]}"
-#    echo "Miner change scriptPubKey: ${PARENT_OUTPUT_SPUBKEY[1]}"      
-#    echo "Parent transaction fees: $FEES BTC"
-#    echo "Parent transaction weight: $((WEIGHT/4)) vbytes"
-
 }
 
 pretty_print(){
@@ -117,14 +83,7 @@ pretty_print(){
 create_child_transaction(){
     PARENT_OUTPUT_VOUT=($(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp decoderawtransaction $HEX | jq -r '.vout | .[] | .n'))
     MINER_ADDR_2=`create_address Miner`
-
-#    echo "Parent txid: $PARENT_TXID"
-#    echo "Parent output vout: ${PARENT_OUTPUT_VOUT[1]}"
-#    echo "New miner address: $MINER_ADDR_2"
-
     CHILD=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=Miner -named createrawtransaction inputs='''[{"txid": "'$PARENT_TXID'", "vout": '${PARENT_OUTPUT_VOUT[1]}'}]''' outputs='''{"'$MINER_ADDR_2'": 29.99898 }''' replaceable=true)   
-
-#    echo "Child Hex: $CHILD"
 }
 
 get_mempool_entry(){
@@ -145,11 +104,6 @@ cleanup(){
     sleep 2
     rm -rf /home/$USER/.bitcoin/tmp
 }
-
-stop_bitcoind(){
-    /usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp stop
-}
-
 
 
 #Setup
@@ -198,7 +152,7 @@ send_transaction
 get_mempool_entry "$CHILD"
 
 #12 explanation in the terminal of what changed and why
-
+echo "The child transaction is no longer in this nodes mempool, because as far as this node is concerned the parent transaction has been replaced. Now, I'd be curious to have a look at a testnet or signet or mainnet version of this, because while this node may refuse to acknowledge the conflicting transactions, I wonder if all other nodes would acknowledge the RBF'd parent as the only legitimate transaction, or whether maybe older nodes would know how to deal with it. I guess it is standard mempool policy that the rbf'd transaction is always the legitimate one, but I still wonder about this a bit."
 
 #Cleanup
 cleanup
