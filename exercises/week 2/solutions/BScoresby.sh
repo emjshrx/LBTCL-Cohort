@@ -157,15 +157,3 @@ echo "The child transaction is no longer in this nodes mempool, because as far a
 #Cleanup
 cleanup
 
-
-
-
-# CODE FOR GRABBING ADDRESS BY LABEL
-#    MINER1=`/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=Miner getaddressesbylabel "$1" | jq -r 'keys[0]'`
-
-
-#get_txid(){
-#    TXID=$(DIR/bitcoin-cli decoderawtransaction $1 | jq -r '.txid')
-#    PARENT_TXID=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp decoderawtransaction $PARENT | jq -r '.txid')
-#}
-
