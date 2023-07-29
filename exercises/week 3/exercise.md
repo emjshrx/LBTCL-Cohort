@@ -8,7 +8,7 @@ In this exercise, we aim to simulate a basic multisig share transfer between two
 
 ### Write a bash script to:
 
-## Setup Multisig
+#### Setup Multisig
 
 1. Create three wallets: `Miner`, `Alice`, and `Bob`.
 2. Fund the wallets by generating some blocks for `Miner` and sending some coins to `Alice` and `Bob`.
@@ -17,7 +17,7 @@ In this exercise, we aim to simulate a basic multisig share transfer between two
 5. Confirm the balance by mining a few more blocks.
 6. Print the final balances of `Alice` and `Bob`.
 
-## Settle Multisig
+#### Settle Multisig
 
 1. Create a PSBT to spend funds from the multisig, ensuring 10 BTC is equally distributed back between `Alice` and `Bob` after accounting for fees.
 2. Sign the PSBT by `Alice`.
