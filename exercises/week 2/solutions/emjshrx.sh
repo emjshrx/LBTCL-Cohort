@@ -44,13 +44,13 @@ bitcoin-cli getmempoolentry $child_txid
 read -n 1 -s -r -p "Press any key to continue"
 clear
 echo "Creating RBF of Parent Tx .... "
-rbf_change_amount=29.99999
+rbf_change_amount=29.99989
 rbf_parent_tx_hex=$(bitcoin-cli -rpcwallet=Miner createrawtransaction '[{"txid":'$input_0',"vout":0},{"txid":'$input_1',"vout":0}]' '[{"'$traderaddr'":'$output_amount'},{"'$mineraddr'":'$rbf_change_amount'}]')
 signed_rbf_parent_tx=$(bitcoin-cli -rpcwallet=Miner signrawtransactionwithwallet $rbf_parent_tx_hex | jq ".hex" | tr -d '"')
 rbf_parent_txid=$(bitcoin-cli sendrawtransaction $signed_rbf_parent_tx)
 echo "RBF Parent Tx broadcasted with txid: $rbf_parent_txid"
 bitcoin-cli getmempoolentry $child_txid  
-echo "Both the times child transactions are the exact same in mempool. When the miner mines a block the rbf transaction will be mined as the fees is more"
+echo "The child tx is no more in the mempool since the new rbf replaces the old parent"
 read -n 1 -s -r -p "This is the End.Press any key to continue"
 clear
 bitcoin-cli stop
