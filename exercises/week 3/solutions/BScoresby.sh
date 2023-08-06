@@ -52,30 +52,63 @@ list_unspent(){
 }
 
 create_multi(){
-    FIRST_ADDR=$(create_address $1)
-    FIRST_PUBKEY=$(get_address_pubkey $1 $FIRST_ADDR)
-    
-    SECOND_ADDR=$(create_address $2)
-    SECOND_PUBKEY=$(get_address_pubkey $2 $SECOND_ADDR)
+    ALICE_INTERNAL_PUBKEY=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=$1 listdescriptors | jq -r '.descriptors | [.[] | select(.desc | startswith("wpkh") and contains("/1/*"))][0] | .desc' | grep -Po '(?<=\().*(?=\))')
+    ALICE_EXTERNAL_PUBKEY=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=$1 listdescriptors | jq -r '.descriptors | [.[] | select(.desc | startswith("wpkh") and contains("/0/*"))][0] | .desc' | grep -Po '(?<=\().*(?=\))')
+    BOB_INTERNAL_PUBKEY=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=$2 listdescriptors | jq -r '.descriptors | [.[] | select(.desc | startswith("wpkh") and contains("/1/*"))][0] | .desc' | grep -Po '(?<=\().*(?=\))')
+    BOB_EXTERNAL_PUBKEY=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=$2 listdescriptors | jq -r '.descriptors | [.[] | select(.desc | startswith("wpkh") and contains("/0/*"))][0] | .desc' | grep -Po '(?<=\().*(?=\))')
 
-    MULTI=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=$1 -named createmultisig nrequired=2 keys='''["'$FIRST_PUBKEY'", "'$SECOND_PUBKEY'"]''')
-    
-    MULTI2=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=$2 -named createmultisig nrequired=2 keys='''["'$FIRST_PUBKEY'", "'$SECOND_PUBKEY'"]''')
+    EXTERNAL_DESCRIPTOR="wsh(sortedmulti(2,"$ALICE_EXTERNAL_PUBKEY","$BOB_EXTERNAL_PUBKEY"))"
+    INTERNAL_DESCRIPTOR="wsh(sortedmulti(2,"$ALICE_INTERNAL_PUBKEY","$BOB_INTERNAL_PUBKEY"))"         
+ 
+    EXTERNAL_DESC_SUM=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp getdescriptorinfo $EXTERNAL_DESCRIPTOR | jq -r '.descriptor')
+    INTERNAL_DESC_SUM=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp getdescriptorinfo "$INTERNAL_DESCRIPTOR" | jq -r '.descriptor')
 
-#The following doesn't work because it is only supported by legacy wallets and throws errors
-#    MULTI=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=$1 -named addmultisigaddress nrequired=2 keys='''["'$FIRST_ADDR'", "'$SECOND_PUBKEY'"]''')
-    
-#    MULTI2=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=$2 -named addmultisigaddress nrequired=2 keys='''["'$FIRST_PUBKEY'", "'$SECOND_ADDR'"]''')
+    MULTI_EXT_DESC="{\"desc\": \"$EXTERNAL_DESC_SUM\", \"active\": true, \"interal\": false, \"timestamp\": \"now\"}"
+    MULTI_INT_DESC="{\"desc\": \"$INTERNAL_DESC_SUM\", \"active\": true, \"interal\": true, \"timestamp\": \"now\"}"
 
-    MULTI_ADDR=$(echo "$MULTI" | jq -r '.address')
-    MULTI_REDEEM=$(echo "$MULTI" | jq -r '.redeemScript')
-    MULTI_DESCRIPTOR=$(echo "$MULTI" | jq -r '.descriptor')
-    echo "Multisig address: $MULTI_ADDR"
-    echo "Multisig redeemscript: $MULTI_REDEEM"    
-    echo "Multisig descriptor: $MULTI_DESCRIPTOR"
+    MULTI_DESC="[$MULTI_EXT_DESC, $MULTI_INT_DESC]"
+}
+
+create_alice_signing_descriptor(){
+    ALICE_INTERNAL_PRIVKEY=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=Alice listdescriptors true | jq -r '.descriptors | [.[] | select(.desc | startswith("wpkh") and contains("/1/*"))][0] | .desc' | grep -Po '(?<=\().*(?=\))')
+    ALICE_EXTERNAL_PRIVKEY=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=Alice listdescriptors true | jq -r '.descriptors | [.[] | select(.desc | startswith("wpkh") and contains("/0/*"))][0] | .desc' | grep -Po '(?<=\().*(?=\))')
+ 
+    EXTERNAL_PRIVKEY_DESCRIPTOR="wsh(sortedmulti(2,"$ALICE_EXTERNAL_PRIVKEY","$BOB_EXTERNAL_PUBKEY"))"
+    INTERNAL_PRIVKEY_DESCRIPTOR="wsh(sortedmulti(2,"$ALICE_INTERNAL_PRIVKEY","$BOB_INTERNAL_PUBKEY"))"         
+
+    EXTERNAL_PRIVKEY_CHECKSUM=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp getdescriptorinfo $EXTERNAL_PRIVKEY_DESCRIPTOR | jq -r '.checksum')
+    INTERNAL_PRIVKEY_CHECKSUM=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp getdescriptorinfo "$INTERNAL_PRIVKEY_DESCRIPTOR" | jq -r '.checksum')
     
-    PRIVKEY=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=$2 dumpprivkey "$MULTI_ADDR")
-    echo $PRIVKEY
+    EXTERNAL_PRIVKEY_DESC_SUM=${EXTERNAL_PRIVKEY_DESCRIPTOR}#${EXTERNAL_PRIVKEY_CHECKSUM}
+    INTERNAL_PRIVKEY_DESC_SUM=${INTERNAL_PRIVKEY_DESCRIPTOR}#${INTERNAL_PRIVKEY_CHECKSUM}
+
+    ALICE_EXT_DESC="{\"desc\": \"$EXTERNAL_PRIVKEY_DESC_SUM\", \"active\": true, \"interal\": false, \"timestamp\": \"now\"}"
+    ALICE_INT_DESC="{\"desc\": \"$INTERNAL_PRIVKEY_DESC_SUM\", \"active\": true, \"interal\": true, \"timestamp\": \"now\"}"
+
+    ALICE_DESC="[$ALICE_EXT_DESC, $ALICE_INT_DESC]"
+}
+
+create_bob_signing_descriptor(){
+    BOB_INTERNAL_PRIVKEY=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=Bob listdescriptors true | jq -r '.descriptors | [.[] | select(.desc | startswith("wpkh") and contains("/1/*"))][0] | .desc' | grep -Po '(?<=\().*(?=\))')
+    BOB_EXTERNAL_PRIVKEY=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=Bob listdescriptors true | jq -r '.descriptors | [.[] | select(.desc | startswith("wpkh") and contains("/0/*"))][0] | .desc' | grep -Po '(?<=\().*(?=\))')
+ 
+    EXTERNAL_PRIVKEY_DESCRIPTOR="wsh(sortedmulti(2,"$ALICE_EXTERNAL_PUBKEY","$BOB_EXTERNAL_PRIVKEY"))"
+    INTERNAL_PRIVKEY_DESCRIPTOR="wsh(sortedmulti(2,"$ALICE_INTERNAL_PUBKEY","$BOB_INTERNAL_PRIVKEY"))"         
+
+    EXTERNAL_PRIVKEY_CHECKSUM=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp getdescriptorinfo $EXTERNAL_PRIVKEY_DESCRIPTOR | jq -r '.checksum')
+    INTERNAL_PRIVKEY_CHECKSUM=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp getdescriptorinfo "$INTERNAL_PRIVKEY_DESCRIPTOR" | jq -r '.checksum')
+    
+    EXTERNAL_PRIVKEY_DESC_SUM=${EXTERNAL_PRIVKEY_DESCRIPTOR}#${EXTERNAL_PRIVKEY_CHECKSUM}
+    INTERNAL_PRIVKEY_DESC_SUM=${INTERNAL_PRIVKEY_DESCRIPTOR}#${INTERNAL_PRIVKEY_CHECKSUM}
+
+    BOB_EXT_DESC="{\"desc\": \"$EXTERNAL_PRIVKEY_DESC_SUM\", \"active\": true, \"interal\": false, \"timestamp\": \"now\"}"
+    BOB_INT_DESC="{\"desc\": \"$INTERNAL_PRIVKEY_DESC_SUM\", \"active\": true, \"interal\": true, \"timestamp\": \"now\"}"
+
+    BOB_DESC="[$ALICE_EXT_DESC, $ALICE_INT_DESC]"
+}
+
+import_descriptors(){
+    /usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=$1 importdescriptors "$2"
 }
 
 funding_psbt(){
@@ -85,7 +118,7 @@ funding_psbt(){
     VOUT2=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -named -rpcwallet=$2 listunspent | jq -r '.[0] | .vout')
     ALICE_CHANGE=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=Alice getrawchangeaddress)
     BOB_CHANGE=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=Bob getrawchangeaddress)
-#    MULTI_ADDR=$(create_address Multi)
+    MULTI_ADDR=$(create_address Multi)
 
     PSBT1=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -named createpsbt inputs='''[ { "txid": "'$TXID1'", "vout": '$VOUT1' }, { "txid": "'$TXID2'", "vout": '$VOUT2' } ]''' outputs='''[ { "'$MULTI_ADDR'": 20 }, { "'$ALICE_CHANGE'": 19.9998 }, { "'$BOB_CHANGE'": 19.9998 } ]''' ) 
 
@@ -101,48 +134,25 @@ funding_psbt(){
     /usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=Bob -named sendrawtransaction hexstring=$HEX
 }
 
-import_descriptor(){
-    /usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=$1 importdescriptors '''[ { "desc": "'$MULTI_DESCRIPTOR'", "timestamp": "now"} ]'''
-}
-
 spending_psbt(){
-    ALICE_ADDR=$(create_address Alice)
-#    echo "Alice's address $ALICE_ADDR"
-    BOB_ADDR=$(create_address Bob)
-#    echo "Bob's address: $BOB_ADDR"
-#    MULTI_CHANGE_ADDR=$(create_address Multi)
-    MULTI_CHANGE_ADDR=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=$1 deriveaddresses "$MULTI_DESCRIPTOR" | jq -r '.[0]')
-#    echo "Multisig change address: $MULTI_CHANGE_ADDR"
+    ALICE_ADDR2=$(create_address Alice)
+    BOB_ADDR2=$(create_address Bob)
+    MULTI_CHANGE_ADDR2=$(create_address Multi)
     MULTI_TXID_1=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=$1 listunspent | jq -r '.[0] | .txid')
-    echo "spending psbt txid $MULTI_TXID_1"
-#    /usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=$1 listunspent
-#    WTXID=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=$1 gettransaction "$MULTI_TXID_1" | jq -r '.wtxid')
-#    echo "Wxtid: $WTXID"    
-    
     MULTI_VOUT_1=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=$1 listunspent | jq '.[0] | .vout')
 
-    PSBT2=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -named createpsbt inputs='''[ { "txid": "'$MULTI_TXID_1'", "vout": '$MULTI_VOUT_1' } ]''' outputs='''[ { "'$ALICE_ADDR'": 5 }, { "'$BOB_ADDR'": 5 }, { "'$MULTI_CHANGE_ADDR'" : 9.998 } ]''' ) 
-#    echo "$PSBT2"    
-    
-#updating psbt
+    PSBT2=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -named createpsbt inputs='''[ { "txid": "'$MULTI_TXID_1'", "vout": '$MULTI_VOUT_1' } ]''' outputs='''[ { "'$ALICE_ADDR2'": 5 }, { "'$BOB_ADDR2'": 5 }, { "'$MULTI_CHANGE_ADDR2'" : 9.998 } ]''' ) 
+}
+
+sign_spending_psbt(){
     PSBT2A=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=Alice walletprocesspsbt "$PSBT2" | jq -r '.psbt')
 
     PSBT2AB=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=Bob walletprocesspsbt "$PSBT2A" | jq -r '.psbt')
 
-#    echo "$PSBT2AB"
-#combining psbt
-#    PSBT2C=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=Alice combinepsbt '''["'$PSBT2A'", "'$PSBT2B'"]''')
-#    echo "$PSBT2C"
-    
-#finalizing psbt    
-    /usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=Alice finalizepsbt "$PSBT2AB"
-#    /usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp decodepsbt "$PSBT2AB"
-    
-#    HEX=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=Alice finalizepsbt "$PSBT2AB" | jq -r '.hex')
+    HEX=$(/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=Alice finalizepsbt "$PSBT2AB" | jq -r '.hex')
 
-#    echo $HEX
 #broadcasting psbt
-#    /usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=Bob -named sendrawtransaction hexstring=$HEX
+    /usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=Bob -named sendrawtransaction hexstring=$HEX
 }
 
 cleanup(){
@@ -150,9 +160,6 @@ cleanup(){
     sleep 2
     rm -rf /home/$USER/.bitcoin/tmp
 }
-
-
-
 
 
 #Setup
@@ -179,33 +186,33 @@ get_balance Bob
 #3. Create 2 of 2 Multisig for Alice and Bob
 create_multi Alice Bob
 create_wallet Multi true true
-import_descriptor Multi
-#import_descriptor Alice
-#import_descriptor Bob
-
-#FUND_MULTI_ADDR=$(echo "$MULTI" | jq -r '.address')
-#FUND_MULTI_REDEEM=$(echo "$MULTI" | jq -r '.redeemScript')
-#FUND_MULTI_DESCRIPTOR=$(echo "$MULTI" | jq -r '.descriptor')
-#echo "$FUND_MULTI_ADDR"
+import_descriptors Multi "$MULTI_DESC"
 
 #4. Create PSBT funding multisig with 20BTC
 funding_psbt Alice Bob
 
 #5. Confirm balance by mining a few more blocks
-#mine_new_blocks Miner 3
+mine_new_blocks Miner 3
 
 #6. Print final balances of Alice and Bob
-#echo "Alice balance: $(get_balance Alice)"
-#echo "Bob balance: $(get_balance Bob)"
+echo "Alice balance: $(get_balance Alice)"
+echo "Bob balance: $(get_balance Bob)"
 
 #SETTLE MULTISIG
 #1. Create PSBT to spend from multisig
-#spending_psbt Multi
-#mine_new_blocks Miner 3
+spending_psbt Multi
 
-#echo "Alice balance: $(get_balance Alice)"
-#echo "Bob balance: $(get_balance Bob)"
-#/usr/local/bin/bitcoin/bin/bitcoin-cli -datadir=/home/$USER/.bitcoin/tmp -rpcwallet=Bob -named decoderawtransaction hexstring=$HEX
+#2. - 4. Sign the PSBT with Alice and Bob wallets, extract and broadcast transaction.
+create_alice_signing_descriptor
+import_descriptors Alice "$ALICE_DESC"
+create_bob_signing_descriptor
+import_descriptors Bob "$BOB_DESC"
+sign_spending_psbt
+
+#5. Mine new blocks to confirm transaction and print balances for Alice and Bob
+mine_new_blocks Miner 1
+echo "Alice balance: $(get_balance Alice)"
+echo "Bob balance: $(get_balance Bob)"
+
 #Cleanup
 cleanup
-
